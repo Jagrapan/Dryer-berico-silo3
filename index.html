@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dryer Dashboard — Berico 60T</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --green: #16a34a;
+            --green-bg: #dcfce7;
+            --yellow: #ca8a04;
+            --yellow-bg: #fef9c3;
+            --red: #dc2626;
+            --red-bg: #fee2e2;
+            --blue: #2563eb;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --border: #cbd5e1;
+            --text: #0f172a;
+            --muted: #64748b;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Sarabun', 'Segoe UI', sans-serif;
+            background: var(--bg);
+            padding: 16px;
+            color: var(--text);
+            font-size: 14px;
+        }
+        
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: var(--card);
+            border-radius: 12px;
+            padding: 20px 24px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        }
+        
+        /* ═══ HEADER ═══ */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid var(--text);
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .header-left h1 {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+        
+        .header-left .subtitle {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+        
+        .header-right {
+            text-align: right;
+        }
+        
+        .header-right .time {
+            font-size: 15px;
+            font-weight: 600;
+        }
+        
+        .header-right .status {
+            display: inline-block;
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            background: var(--green-bg);
+            color: var(--green);
+            font-weight: 600;
+            margin-top: 4px;
+        }
+        
+        /* ═══ ROW 1: KPI CARDS ═══ */
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        
+        .card {
+            background: var(--card);
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 16px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 4px;
+        }
+        
+        .card.ok::before { background: var(--green); }
+        .card.warn::before { background: var(--yellow); }
+        .card.bad::before { background: var(--red); }
+        
+        .card .label {
+            font-size: 11px;
+            color: var(--muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+        
+        .card .value {
+            font-size: 30px;
+            font-weight: 800;
+            line-height: 1;
+            color: var(--text);
+        }
+        
+        .card .unit {
+            font-size: 14px;
+            color: var(--muted);
+            font-weight: 500;
+            margin-left: 3px;
+        }
+        
+        .card .status {
+            font-size: 11px;
+            margin-top: 8px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        
+        .card.ok .status { background: var(--green-bg); color: var(--green); }
+        .card.warn .status { background: var(--yellow-bg); color: var(--yellow); }
+        .card.bad .status { background: var(--red-bg); color: var(--red); }
+        
+        /* ═══ ROW 2: CHART + ROUND ═══ */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1.6fr 1fr;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        
+        .panel {
+            background: var(--card);
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 16px;
+        }
+        
+        .panel .panel-title {
+            font-size: 12px;
+            color: var(--muted);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .panel .panel-title .badge {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 8px;
+            background: var(--bg);
+            color: var(--muted);
+            text-transform: none;
+            font-weight: 500;
+        }
+        
+        .chart-wrap {
+            position: relative;
+            height: 180px;
+        }
+        
+        /* Round progress */
+        .round-info {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .round-value {
+            font-size: 34px;
+            font-weight: 800;
+            line-height: 1;
+        }
+        
+        .round-value small {
+            font-size: 16px;
+            color: var(--muted);
+            font-weight: 500;
+        }
+        
+        .progress-bar {
+            background: #e2e8f0;
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+        
+        .progress-fill {
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.5s ease;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--muted);
+            padding: 4px 0;
+            border-bottom: 1px dashed var(--border);
+        }
+        
+        .info-row:last-child { border-bottom: none; }
+        .info-row strong { color: var(--text); font-weight: 600; }
+        
+        /* ═══ ROW 3: ALARMS ═══ */
+        .alarm-panel {
+            margin-bottom: 14px;
+        }
+        
+        .alarm-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        
+        .alarm-list li {
+            font-size: 12px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            background: var(--bg);
+            border-left: 3px solid var(--muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .alarm-list li.warn { border-left-color: var(--yellow); background: var(--yellow-bg); }
+        .alarm-list li.ok { border-left-color: var(--green); background: var(--green-bg); }
+        
+        .alarm-list li .time {
+            font-size: 10px;
+            color: var(--muted);
+            font-weight: 600;
+        }
+        
+        /* ═══ ROW 4: TEAM + SUMMARY ═══ */
+        .grid-2b {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        
+        .list-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            font-size: 13px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .list-row:last-child { border-bottom: none; }
+        
+        .list-row .key { color: var(--muted); }
+        .list-row .val { font-weight: 700; color: var(--text); }
+        
+        .pill {
+            display: inline-block;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        
+        .pill.ok { background: var(--green-bg); color: var(--green); }
+        .pill.wait { background: var(--yellow-bg); color: var(--yellow); }
+        
+        /* ═══ FOOTER ═══ */
+        .footer {
+            margin-top: 14px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: var(--muted);
+        }
+        
+        /* ═══════════════════════════════════════ */
+        /* PRINT A4 LANDSCAPE                      */
+        /* ═══════════════════════════════════════ */
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 8mm;
+            }
+            
+            body {
+                background: white;
+                padding: 0;
+                font-size: 11px;
+            }
+            
+            .dashboard {
+                box-shadow: none;
+                border-radius: 0;
+                padding: 0;
+                max-width: 100%;
+            }
+            
+            .card, .panel {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+            
+            .chart-wrap { height: 150px; }
+            .card .value { font-size: 24px; }
+            .header-left h1 { font-size: 16px; }
+            .round-value { font-size: 26px; }
+        }
+        
+        /* ═══ RESPONSIVE ═══ */
+        @media (max-width: 900px) {
+            .grid-4 { grid-template-columns: repeat(2, 1fr); }
+            .grid-2, .grid-2b { grid-template-columns: 1fr; }
+            .alarm-list { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        
+        <!-- ═══════════ HEADER ═══════════ -->
+        <div class="header">
+            <div class="header-left">
+                <h1>🌽 DRYER DASHBOARD — Berico 60T</h1>
+                <div class="subtitle">TPM Step 4 · SEE-DO-SHARE-SCALE · PLC Monitoring</div>
+            </div>
+            <div class="header-right">
+                <div class="time" id="datetime">--</div>
+                <div class="status" id="sysStatus">● ระบบทำงานปกติ</div>
+            </div>
+        </div>
+        
+        <!-- ═══════════ ROW 1: KPI ═══════════ -->
+        <div class="grid-4">
+            <div class="card ok">
+                <div class="label">🌡️ อุณหภูมิห้องเผาไหม้</div>
+                <div class="value">85<span class="unit">°C</span></div>
+                <div class="status">✅ ปกติ (70–95)</div>
+            </div>
+            <div class="card ok">
+                <div class="label">🌡️ อุณหภูมิลมร้อน</div>
+                <div class="value">78<span class="unit">°C</span></div>
+                <div class="status">✅ ปกติ (60–85)</div>
+            </div>
+            <div class="card warn">
+                <div class="label">💧 ความชื้นขาเข้า</div>
+                <div class="value">22.5<span class="unit">%</span></div>
+                <div class="status">⚠️ สูงกว่าเป้า</div>
+            </div>
+            <div class="card ok">
+                <div class="label">💧 ความชื้นขาออก</div>
+                <div class="value">14.2<span class="unit">%</span></div>
+                <div class="status">✅ ปกติ (13–15)</div>
+            </div>
+        </div>
+        
+        <!-- ═══════════ ROW 2: CHART + ROUND ═══════════ -->
+        <div class="grid-2">
+            <div class="panel">
+                <div class="panel-title">
+                    📈 แนวโน้มความชื้น & อุณหภูมิ (24 ชม.)
+                    <span class="badge">อัปเดตทุก 1 นาที</span>
+                </div>
+                <div class="chart-wrap">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <div class="panel-title">🔄 สถานะรอบการหมุนเวียน</div>
+                <div class="round-info">
+                    <div class="round-value">8 <small>/ 10 รอบ</small></div>
+                    <div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 80%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="info-row">
+                            <span class="key">⏱️ เวลาที่ใช้</span>
+                            <strong>45 นาที</strong>
+                        </div>
+                        <div class="info-row">
+                            <span class="key">🎯 เวลารวมเป้าหมาย</span>
+                            <strong>60 นาที</strong>
+                        </div>
+                        <div class="info-row">
+                            <span class="key">📦 น้ำหนักข้าวโพด</span>
+                            <strong>60 ตัน</strong>
+                        </div>
+                        <div class="info-row">
+                            <span class="key">💧 ความชื้นเป้าหมาย</span>
+                            <strong>14.0 %</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ═══════════ ROW 3: ALARMS ═══════════ -->
+        <div class="panel alarm-panel">
+            <div class="panel-title">
+                🔔 แจ้งเตือนล่าสุด
+                <span class="badge">3 รายการ</span>
+            </div>
+            <ul class="alarm-list">
+                <li class="warn">
+                    <span>⚠️ ความชื้นขาออกสูงกว่าเป้า 0.5%</span>
+                    <span class="time">10:15</span>
+                </li>
+                <li class="ok">
+                    <span>✅ รอบการหมุนเวียนครบ 8 รอบ</span>
+                    <span class="time">09:30</span>
+                </li>
+                <li class="ok">
+                    <span>✅ อุณหภูมิห้องเผาไหม้ปกติ</span>
+                    <span class="time">08:45</span>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- ═══════════ ROW 4: TEAM + SUMMARY ═══════════ -->
+        <div class="grid-2b">
+            <div class="panel">
+                <div class="panel-title">👥 ทีมวันนี้ (หมุนเวียน)</div>
+                <div class="list-row">
+                    <span class="key">👁️ SEE (คน 1)</span>
+                    <span class="pill ok">✅ เสร็จ</span>
+                </div>
+                <div class="list-row">
+                    <span class="key">✋ DO (คน 2)</span>
+                    <span class="pill ok">✅ เสร็จ</span>
+                </div>
+                <div class="list-row">
+                    <span class="key">🗣️ SHARE (คน 3)</span>
+                    <span class="pill wait">⏳ กำลังทำ</span>
+                </div>
+                <div class="list-row">
+                    <span class="key">🦶 SCALE (คน 4)</span>
+                    <span class="pill ok">✅ เสร็จ</span>
+                </div>
+                <div class="list-row">
+                    <span class="key">🔧 ช่าง</span>
+                    <span class="pill ok">✅ ตรวจ 5 จุด</span>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <div class="panel-title">📊 สรุปเดือนนี้</div>
+                <div class="list-row">
+                    <span class="key">🔍 ความผิดปกติที่พบ</span>
+                    <span class="val">12 จุด</span>
+                </div>
+                <div class="list-row">
+                    <span class="key">⚡ Quick Win สำเร็จ</span>
+                    <span class="val">3 เรื่อง</span>
+                </div>
+                <div class="list-row">
+                    <span class="key">📹 วิดีโอ SHARE</span>
+                    <span class="val">2 คลิป</span>
+                </div>
+                <div class="list-row">
+                    <span class="key">⏸️ เครื่องหยุด (เป้า ≤10 ชม.)</span>
+                    <span class="val" style="color: var(--green);">6 ชม. ✅</span>
+                </div>
+                <div class="list-row">
+                    <span class="key">🎯 อัตราความสำเร็จ</span>
+                    <span class="val" style="color: var(--green);">87%</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ═══════════ FOOTER ═══════════ -->
+        <div class="footer">
+            <span>📄 Berico 60T · TPM Step 4 Dashboard · Version 1.0</span>
+            <span>🖨️ พิมพ์ A4 แนวนอน · 🔗 GitHub Pages</span>
+        </div>
+    </div>
+    
+    <!-- ═══════════ JAVASCRIPT ═══════════ -->
+    <script>
+        // ═══ 1. นาฬิกาเรียลไทม์ ═══
+        function updateTime() {
+            const now = new Date();
+            const options = { 
+                weekday: 'short', 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            };
+            document.getElementById('datetime').textContent = 
+                now.toLocaleDateString('th-TH', options);
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+        
+        // ═══ 2. Trend Chart ═══
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        
+        // ข้อมูลจำลอง 24 ชม. (ทุก 2 ชม.)
+        const labels = ['00:00','02:00','04:00','06:00','08:00','10:00',
+                        '12:00','14:00','16:00','18:00','20:00','22:00'];
+        const moData  = [14.5, 14.3, 14.2, 14.0, 14.8, 15.2, 
+                         14.9, 14.5, 14.2, 14.4, 14.3, 14.2];
+        const tempData = [82, 83, 84, 85, 86, 88, 
+                          87, 86, 85, 84, 83, 85];
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'ความชื้นขาออก (%)',
+                        data: moData,
+                        borderColor: '#16a34a',
+                        backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                        borderWidth: 2.5,
+                        tension: 0.35,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#16a34a',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 1.5,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'อุณหภูมิห้องเผาไหม้ (°C)',
+                        data: tempData,
+                        borderColor: '#dc2626',
+                        backgroundColor: 'rgba(220, 38, 38, 0.05)',
+                        borderWidth: 2,
+                        borderDash: [5, 3],
+                        tension: 0.35,
+                        pointRadius: 2,
+                        pointBackgroundColor: '#dc2626',
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        align: 'end',
+                        labels: {
+                            boxWidth: 12,
+                            boxHeight: 2,
+                            font: { size: 11 },
+                            padding: 8
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                        padding: 10,
+                        titleFont: { size: 12 },
+                        bodyFont: { size: 11 },
+                        cornerRadius: 6
+                    }
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        position: 'left',
+                        min: 12,
+                        max: 18,
+                        title: {
+                            display: true,
+                            text: 'ความชื้น (%)',
+                            font: { size: 10 },
+                            color: '#64748b'
+                        },
+                        grid: { color: '#e2e8f0' },
+                        ticks: { font: { size: 10 }, color: '#64748b' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        position: 'right',
+                        min: 75,
+                        max: 95,
+                        title: {
+                            display: true,
+                            text: 'อุณหภูมิ (°C)',
+                            font: { size: 10 },
+                            color: '#64748b'
+                        },
+                        grid: { drawOnChartArea: false },
+                        ticks: { font: { size: 10 }, color: '#64748b' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 10 }, color: '#64748b' }
+                    }
+                }
+            }
+        });
+        
+        // ═══ 3. ฟังก์ชันอัปเดตข้อมูล (เชื่อมกับ PLC ภายหลัง) ═══
+        function updateKPI(id, value, unit) {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = value + '<span class="unit">' + unit + '</span>';
+        }
+        
+        // ตัวอย่างการเรียกใช้ (เมื่อเชื่อม PLC จริง)
+        // updateKPI('tempBurner', 86, '°C');
+        // updateKPI('tempAir', 79, '°C');
+        // updateKPI('moistureIn', 23.1, '%');
+        // updateKPI('moistureOut', 14.0, '%');
+ทดสอบ        
+        // ═══ 4
+
+|. อัปเดตข้อมูลทุก 60 วินาที (จำลอง) ═══
+        setInterval(() => {
+            console.log('[Dashboard] อัปเดตข้อมูล:', new Date().toLocaleTimeString('th-TH'));
+            // ตรงนี้จะเชื่อมกับ PLC / API ในอนาคต
+        }, 60000);
+    </script>
+</body>
+</html>
